@@ -1,7 +1,7 @@
 {
   "name": "Plant 076 Warehouse Simulation",
   "short_name": "Plant076",
-  "description": "Interactive 3D warehouse simulation for Plant 076 with walk mode, mobile controls, and WebXR/Quest-ready launch behavior.",
+  "description": "Interactive 3D warehouse simulation for Plant 076 with fullscreen display, an in-app fullscreen control, mobile walk controls, and WebXR/VR launch support for compatible Android and headset browsers.",
   "id": "./plant076-warehouse-sim",
   "start_url": "./index.html",
   "scope": "./",
@@ -48,7 +48,7 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Plant 076 warehouse simulation in landscape view"
+      "label": "Plant 076 warehouse simulation with fullscreen landscape layout and WebXR/VR support"
     }
   ]
 }

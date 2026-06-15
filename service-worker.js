@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plant076-single-version-v95';
+const CACHE_NAME = 'plant076-single-version-v96';
 const APP_SHELL = [
   './',
   './index.html',

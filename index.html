@@ -101,7 +101,7 @@ canvas{width:100%;height:100%;display:block}
    <option value="walk2">Walk · 2nd Person</option>
    <option value="walk3">Walk · 3rd Person</option>
   </select>
-  <button id="btnFS" title="Fullscreen">⛶</button>
+  <button id="btnFS" title="Enter fullscreen" aria-label="Enter fullscreen mode">⛶</button>
  </div>
  <div id="stage">
   <canvas id="c"></canvas>
@@ -4262,7 +4262,10 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.2;
-document.body.appendChild(VRButton.createButton(renderer));
+const vrButton=VRButton.createButton(renderer);
+vrButton.title='Enter VR / WebXR mode';
+vrButton.setAttribute('aria-label','Enter VR / WebXR mode');
+document.body.appendChild(vrButton);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x16191d);
 scene.fog=new THREE.Fog(0x16191d,1200,3000); // depth haze; starts beyond top-down view distance
@@ -8684,6 +8687,8 @@ function toggleFullscreen(){
 btnFS.addEventListener('click',toggleFullscreen);
 document.addEventListener('fullscreenchange',()=>{
   btnFS.textContent=document.fullscreenElement?'🗗':'⛶';
+  btnFS.title=document.fullscreenElement?'Exit fullscreen':'Enter fullscreen';
+  btnFS.setAttribute('aria-label',document.fullscreenElement?'Exit fullscreen mode':'Enter fullscreen mode');
   resize(); invalidate();
 });
 document.addEventListener('webkitfullscreenchange',()=>{resize(); invalidate();});
