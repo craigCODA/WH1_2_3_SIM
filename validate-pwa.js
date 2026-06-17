@@ -65,6 +65,31 @@ if (!html.includes("const serviceWorkerUrl = '/WH1_2_3_SIM/service-worker.js'") 
   fail.push('index.html should register /WH1_2_3_SIM/service-worker.js with project scope');
 }
 
+function extractInlineAppScript(source) {
+  const openTag = '<script type="module">';
+  const start = source.indexOf(openTag);
+  if (start === -1) return null;
+
+  const bodyStart = start + openTag.length;
+  const end = source.indexOf('</script>', bodyStart);
+  if (end === -1) return null;
+
+  return source.slice(bodyStart, end).trim();
+}
+
+const inlineAppScript = extractInlineAppScript(html);
+const appScriptPath = path.join(root, 'app_script_consistent_teaching_final.js');
+if (!inlineAppScript) {
+  fail.push('index.html needs the inline Plant 076 app module');
+} else if (!fs.existsSync(appScriptPath)) {
+  fail.push('app_script_consistent_teaching_final.js is missing');
+} else {
+  const externalAppScript = fs.readFileSync(appScriptPath, 'utf8').trim();
+  if (externalAppScript !== inlineAppScript) {
+    fail.push('app_script_consistent_teaching_final.js is out of sync with the inline index.html app module; run node sync-app-script.js');
+  }
+}
+
 const sw = fs.existsSync(serviceWorkerPath) ? fs.readFileSync(serviceWorkerPath, 'utf8') : '';
 if (!/addEventListener\(['"]fetch['"]/.test(sw)) fail.push('service-worker.js needs a fetch handler');
 if (!/caches\.open/.test(sw)) fail.push('service-worker.js should open a cache for offline app shell support');

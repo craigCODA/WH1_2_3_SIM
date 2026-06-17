@@ -1,60 +1,3 @@
-/*
-╔══════════════════════════════════════════════════════════════╗
-║ LESSON 00 — HOW THIS FILE IS STRUCTURED AND WHY              ║
-╚══════════════════════════════════════════════════════════════╝
-
-This file is the Plant 076 app script extracted from the full offline HTML.
-
-Read it top to bottom. Each layer exists before the next layer needs it.
-
-1. VENDOR BINDING
-   The Three.js engine is bundled into the HTML before this script.
-   The first executable lines open that sealed engine.
-
-2. UNIT BRIDGE
-   The plant is described in feet and inches. Three.js renders in meters.
-   FEET_TO_METERS and INCHES_TO_METERS are the only conversion bridge.
-
-3. SEALED ASSET
-   The forklift screen image is inline base64 so the app stays offline.
-   It is data, not logic.
-
-4. WORLD DIMENSIONS AND PHYSICAL RULES
-   The plant is measured and named before anything is drawn.
-
-5. ENGINE SETUP
-   Renderer, scene, camera, lights, XR, and controls.
-
-6. INPUT STATE AND VIEW GATEKEEPER
-   Inputs update state. setView() is the single path for view changes.
-
-7. FLOOR PAINT, BIN REGISTRY, BUILDERS, FORKLIFT, WALK MODE, RENDER LOOP
-   The file builds outward from measured facts into visible behavior.
-
-The boxed comments are teaching script.
-Small inline comments are implementation notes.
-Repeated work should use one consistent method unless a named physical rule
-explains why an exception exists.
-*/
-
-/*
-╔══════════════════════════════════════════════════════════════╗
-║ VENDOR BINDING — OPENING THE ENGINE                          ║
-╚══════════════════════════════════════════════════════════════╝
-
-Three.js is bundled into the HTML file above this script and stored at
-window.__THREE_VENDOR__. It is not loaded from a CDN because this app must
-run fully offline on a Quest headset with no network connection.
-
-The two lines below are the first executable statements in the file because
-everything that follows depends on THREE, OrbitControls, VRButton, and
-RoomEnvironment. OrbitControls handles the mouse-drag orbit camera. VRButton
-creates the Enter VR button that WebXR requires. RoomEnvironment generates the
-image-based lighting that gives PBR materials real reflections.
-
-These are the only three pieces of the vendor bundle this app uses directly.
-Everything else in Three.js is accessed through them.
-*/
 // Three.js comes from the inlined bundle above (offline) instead of a CDN importmap
 const THREE = window.__THREE_VENDOR__;
 const { OrbitControls, VRButton, RoomEnvironment } = window.__THREE_VENDOR__;
@@ -76,21 +19,6 @@ The standard is consistency:
 
 The reader should be able to move downward through the file and understand
 why each layer exists before the next layer depends on it.
-*/
-/*
-╔══════════════════════════════════════════════════════════════╗
-║ UNIT BRIDGE — THE WHOLE FILE SPEAKS FEET AND INCHES          ║
-╚══════════════════════════════════════════════════════════════╝
-
-Three.js works in meters. The plant was built in feet and inches.
-
-These two constants are the only place that conversion lives. Every
-measurement below multiplies by one of them — never by a raw decimal.
-That way the source reads in the units the plant was designed in, and
-Three.js gets the meters it needs.
-
-FEET_TO_METERS = 0.3048 is exact (1959 international foot definition).
-INCHES_TO_METERS = 0.0254 is exact (25.4 mm per inch, same definition).
 */
 const FEET_TO_METERS = 0.3048;
 const INCHES_TO_METERS = 0.0254;
@@ -499,6 +427,14 @@ controls.enableDamping=true; controls.dampingFactor=0.07;
 controls.maxPolarAngle=Math.PI/2.01;
 controls.minDistance=5; controls.maxDistance=2000;
 const keys=new Set();
+const ORBIT_CAMERA_NEAR=0.1, ORBIT_CAMERA_FAR=3000;
+const WALK_CAMERA_NEAR=0.35, WALK_CAMERA_FAR=1800;
+function setCameraClip(near,far){
+  if(camera.near===near&&camera.far===far) return;
+  camera.near=near;
+  camera.far=far;
+  camera.updateProjectionMatrix();
+}
 
 /*
 ╔══════════════════════════════════════════════════════════════╗
@@ -554,6 +490,11 @@ const CAB_EYE_BACK=0.52; // m — driver's eye behind the lift origin: over the 
 let mounted=false;
 const liftState={pos:new THREE.Vector3(74*FEET_TO_METERS,0,33*FEET_TO_METERS),yaw:-Math.PI/2}; // parked in a west parking stall
 const MOUNT_RANGE=3.5;
+const SHIPPING_OFFICE_WALK_START={
+  x:SHIP_OFFICE.hallX+2.5*FEET_TO_METERS,
+  z:(SHIP_OFFICE.openZ0+SHIP_OFFICE.openZ1)/2,
+  yaw:Math.PI/2
+};
 
 /*
 ╔══════════════════════════════════════════════════════════════╗
@@ -576,7 +517,7 @@ function setView(requestedView){
     if(viewMode!=='walk'){
       viewMode='walk';
       controls.enabled=false;
-      camera.fov=75; camera.updateProjectionMatrix();
+      camera.fov=75; setCameraClip(WALK_CAMERA_NEAR,WALK_CAMERA_FAR); camera.updateProjectionMatrix();
     }
     if(viewMode==='walk'&&namedSpawn){
       mounted=false;
@@ -590,9 +531,9 @@ function setView(requestedView){
         walk.pos.set(rawGoodsOffice.x1-3*FEET_TO_METERS, FOOT_EYE, (rawGoodsOffice.z0+rawGoodsOffice.z1)/2);
         walk.yaw=Math.PI/2; // facing west from the desk
       } else {
-        // Default 1st-person walk starts in the Shipping Office.
-        walk.pos.set(SHIP_OFFICE.x1-5*FEET_TO_METERS, FOOT_EYE, SHIP_OFFICE.z0+10*FEET_TO_METERS);
-        walk.yaw=Math.PI/2; // facing west inside shipping office
+        // Default 1st-person walk starts in the open shipping-office hallway.
+        walk.pos.set(SHIPPING_OFFICE_WALK_START.x, FOOT_EYE, SHIPPING_OFFICE_WALK_START.z);
+        walk.yaw=SHIPPING_OFFICE_WALK_START.yaw; // facing west inside shipping office
       }
       walk.pitch=0;
     }
@@ -602,7 +543,7 @@ function setView(requestedView){
     return;
   }
   if(document.pointerLockElement===canvas) document.exitPointerLock();
-  camera.fov=42; camera.updateProjectionMatrix();
+  camera.fov=42; setCameraClip(ORBIT_CAMERA_NEAR,ORBIT_CAMERA_FAR); camera.updateProjectionMatrix();
   viewMode='orbit';
   controls.enabled=true;
   const plantCenterX=WORLD_CX,plantCenterZ=WORLD_CZ;
@@ -1655,21 +1596,6 @@ floorPaintContext.fillStyle='#1255a4';
 WH1_ROW_BLOCKS.slice(0,-1).forEach(([xl,xr])=>fillFloorRectMeters(xl,BIN_N-4*FEET_TO_METERS,xr,BIN_N));
 fillFloorRectMeters(PLANT_REGIONS.J_L,J_ZS-4*FEET_TO_METERS,PLANT_REGIONS.J_R,J_ZS);
 
-/*
-╔══════════════════════════════════════════════════════════════╗
-║ THREAD RULE — WH1 ROWS END HERE, WH2 BINS START HERE        ║
-╚══════════════════════════════════════════════════════════════╝
-
-Everything above registered WH1 pallet-rack rows (A through J) using the
-580-inch column cycle and the pair-row pattern.
-
-Everything below registers WH2 and WH3 storage, which uses different
-geometry: painted floor bins (no rack), FIFO lanes, and WH3 floor columns.
-
-The registration method is the same — every bin still goes through
-registerBinQuad(). The difference is the physical layout, not the rule.
-*/
-
 // ── WH2 BIN CLUSTER — 9 × 96in, 42ft wide, 25ft east of void wall ──────────
 // Column gap at BIN_N+572–580in splits the cluster.
 // Upper 5 pushed south to meet gap — solo(1)+pair(2+3)+pair(4+5).
@@ -2324,10 +2250,8 @@ for(const plan of COLUMN_PLANS)
 floorPaintContext.fillStyle='rgba(240,240,235,0.95)';
 fillFloorRectMeters(SHIP_OFFICE.x0,SHIP_OFFICE.z0,SHIP_OFFICE.x1,SHIP_OFFICE.z1);
 floorPaintContext.fillStyle='#ffffff';
-drawVerticalFloorLineMeters(SHIP_OFFICE.x0,SHIP_OFFICE.z0,SHIP_OFFICE.z1);
-drawVerticalFloorLineMeters(SHIP_OFFICE.x1,SHIP_OFFICE.z0,12.5*FEET_TO_METERS); // east wall, broken at the propped-open doorway
-drawVerticalFloorLineMeters(SHIP_OFFICE.x1,15.5*FEET_TO_METERS,SHIP_OFFICE.z1);
-drawHorizontalFloorLineMeters(SHIP_OFFICE.z0,SHIP_OFFICE.x0+4*FEET_TO_METERS,SHIP_OFFICE.x1);
+drawVerticalFloorLineMeters(SHIP_OFFICE.x1,SHIP_OFFICE.z0,SHIP_OFFICE.z0+12.5*FEET_TO_METERS); // east wall, broken at the propped-open doorway
+drawVerticalFloorLineMeters(SHIP_OFFICE.x1,SHIP_OFFICE.z0+15.5*FEET_TO_METERS,SHIP_OFFICE.z1);
 drawHorizontalFloorLineMeters(SHIP_OFFICE.z1,SHIP_OFFICE.x0,SHIP_OFFICE.x1);
 drawVerticalFloorLineMeters(SHIP_OFFICE.hallX,SHIP_OFFICE.z0,SHIP_OFFICE.openZ0);
 drawVerticalFloorLineMeters(SHIP_OFFICE.hallX,SHIP_OFFICE.openZ1,SHIP_OFFICE.hallDoorZ0);
@@ -3456,16 +3380,14 @@ const Gwalls=new THREE.Group(); scene.add(Gwalls);
     const addShipWall=(x,z,w,d,height=h,y=height/2,mat=officeMat)=>{
       const part=new THREE.Mesh(new THREE.BoxGeometry(w,height,d),mat);
       part.position.set(x,y,z);
-      part.castShadow=true; part.receiveShadow=true;
+      part.castShadow=false; part.receiveShadow=false;
       Gwalls.add(part);
       return part;
     };
     const so=SHIP_OFFICE, cx=(so.x0+so.x1)/2, cz=(so.z0+so.z1)/2;
-    addShipWall(cx,so.z0+t/2,so.x1-so.x0-4*FEET_TO_METERS,t); // north wall, door gap at far west
     addShipWall(cx,so.z1-t/2,so.x1-so.x0,t);
-    addShipWall(so.x0+t/2,cz,t,so.z1-so.z0);
     // east wall — 3ft doorway between cage south (12ft) and north room's south wall (16ft)
-    const eDoorZ0=12.5*FEET_TO_METERS, eDoorZ1=15.5*FEET_TO_METERS;
+    const eDoorZ0=so.z0+12.5*FEET_TO_METERS, eDoorZ1=so.z0+15.5*FEET_TO_METERS;
     addShipWall(so.x1-t/2,(so.z0+eDoorZ0)/2,t,eDoorZ0-so.z0);
     addShipWall(so.x1-t/2,(eDoorZ1+so.z1)/2,t,so.z1-eDoorZ1);
     addShipWall(so.x1-t/2,(eDoorZ0+eDoorZ1)/2,t,eDoorZ1-eDoorZ0,3*FEET_TO_METERS,8.5*FEET_TO_METERS); // header
@@ -3512,7 +3434,7 @@ const Gwalls=new THREE.Group(); scene.add(Gwalls);
     for(const tableZ of [so.roomZ+(13/3)*FEET_TO_METERS,so.roomZ+(28/3)*FEET_TO_METERS]){
       const table=new THREE.Mesh(new THREE.CylinderGeometry(2*FEET_TO_METERS,2*FEET_TO_METERS,2.5*FEET_TO_METERS,28),deskMat);
       table.position.set((so.hallX+so.bathX0)/2,1.25*FEET_TO_METERS,tableZ);
-      table.castShadow=true; table.receiveShadow=true;
+      table.castShadow=false; table.receiveShadow=false;
       Gwalls.add(table);
     }
   }
@@ -4673,7 +4595,7 @@ const vrPanel=(()=>{
     c.fillStyle='#cfd8dc'; c.fillText(v,200,y);
   });
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.44),
-    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
+    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:true,depthWrite:false}));
   mesh.renderOrder=999;
   mesh.position.set(0,1.12,-0.85); mesh.rotation.x=-0.38;
   mesh.visible=false;
@@ -4687,6 +4609,9 @@ renderer.xr.addEventListener('sessionstart',()=>{
   // VR starts on foot in the office, same spawn as walk mode — A mounts when near the lift
   vrMounted=false; vrCam3=false; vrFast=true;
   const VR_HEAD_RAISE=6*INCHES_TO_METERS; // lift the whole rig 6 inches
+  setCameraClip(WALK_CAMERA_NEAR,WALK_CAMERA_FAR);
+  walk.pos.set(SHIPPING_OFFICE_WALK_START.x,FOOT_EYE,SHIPPING_OFFICE_WALK_START.z);
+  walk.yaw=SHIPPING_OFFICE_WALK_START.yaw;
   player.position.set(walk.pos.x,VR_HEAD_RAISE,walk.pos.z);
   player.rotation.set(0,walk.yaw,0);
   vrCamOffset.add(camera);
@@ -4695,7 +4620,7 @@ renderer.xr.addEventListener('sessionstart',()=>{
   camera.rotation.set(0,0,0);
   Gforklift.visible=true;
   Gforklift.position.copy(liftState.pos); Gforklift.rotation.set(0,liftState.yaw,0);
-  vrPanel.visible=true; // shown on entry; Y hides it
+  vrPanel.visible=false; // Y toggles it after the scene is stable
 });
 renderer.xr.addEventListener('sessionend',()=>{
   // lift stays wherever the VR drive ended (only if it was being driven)
@@ -4709,6 +4634,7 @@ renderer.xr.addEventListener('sessionend',()=>{
   Gforklift.visible=false;
   mountArrow.visible=false;
   vrPanel.visible=false;
+  setCameraClip(ORBIT_CAMERA_NEAR,ORBIT_CAMERA_FAR);
   setView('top');
   renderer.shadowMap.needsUpdate=true; // re-bake static shadows without the forklift
 });
