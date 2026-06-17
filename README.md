@@ -1,67 +1,53 @@
-# Android PWA / TWA Build Notes
+# Plant 076 Warehouse Simulation — PWABuilder Fixed Package
 
-This folder is for Android packaging only. The live PWA files stay at the project root.
-
-## Current PWA files
-
-- `../index.html`
-- `../manifest.json`
-- `../service-worker.js`
-- `../icon-192.png`
-- `../icon-512.png`
-- `../maskable-icon-512.png`
-- `../screenshot-wide.png`
-
-The root manifest has the installable Android basics:
-
-- `name` / `short_name`
-- `start_url`
-- `scope`
-- `display: fullscreen`
-- `display_override` with `fullscreen`, `standalone`, and `minimal-ui`
-- 192x192 icon
-- 512x512 icon
-- maskable 512x512 icon
-- service worker with a fetch handler
-- explicit manifest description mentioning fullscreen and WebXR/VR support
-
-## PWA Builder capability wording
-
-Use this wording when PWA Builder asks what the Android package supports:
+This package is prepared for the current GitHub Pages project URL:
 
 ```text
-Plant 076 is a fullscreen 3D warehouse simulation. It includes an in-app fullscreen control and WebXR/VR launch support for compatible Android browsers, Quest/headset browsers, and devices with WebXR support.
+https://craig-coda.github.io/WH1_2_3_SIM/
 ```
 
-The app exposes those capabilities in the root files:
+## What changed
 
-- `manifest.json` uses `display: fullscreen`.
-- `index.html` includes the fullscreen button with `aria-label="Enter fullscreen mode"`.
-- `index.html` creates the Three.js `VRButton` with `aria-label="Enter VR / WebXR mode"`.
+- `index.html` was replaced with `index_consistent_teaching_source_final.html` and kept under the required deploy name `index.html`.
+- `app_script_consistent_teaching_final.js` was added to the root of the package.
+- `manifest.json` now uses the GitHub Pages project path for `id`, `start_url`, and `scope`.
+- Manifest icon and screenshot paths now point under `/WH1_2_3_SIM/`.
+- `display` is set to `standalone` with `display_override` keeping `fullscreen` first.
+- `index.html` now registers `/WH1_2_3_SIM/service-worker.js` with scope `/WH1_2_3_SIM/`.
+- `service-worker.js` now caches the GitHub Pages project path and avoids caching failed responses.
+- `validate-pwa.js` was fixed for this package layout. It now validates from the repo root instead of one folder above it.
 
-## Android build requirement that cannot be completed until signing
+## Run the local file check
 
-For a Play Store / Trusted Web Activity build, Android needs Digital Asset Links at:
+From this folder:
+
+```bash
+node validate-pwa.js
+```
+
+Expected result:
 
 ```text
-https://YOUR_HOST/.well-known/assetlinks.json
+Android PWA check passed.
+TWA note: add https://craig-coda.github.io/.well-known/assetlinks.json after Android package id and release SHA-256 are known.
 ```
 
-That file must include the final Android package name and SHA-256 signing certificate fingerprint. Use `assetlinks.template.json` in this folder after you know those values.
+## Important Android / TWA note
 
-Required values:
+For a normal browser-installed PWA, this package has the needed installability basics.
 
-- Hosted HTTPS origin, for example `https://plant076.example.com`
-- Android package id, for example `com.plastipak.plant076`
-- Release signing certificate SHA-256 fingerprint
+For an Android Trusted Web Activity build, Digital Asset Links still requires the final Android package name and release signing SHA-256 fingerprint.
 
-## Build flow
+Because this app is hosted under a GitHub Pages project path, Android checks the origin root:
 
-1. Host the root files over HTTPS.
-2. Run `node android/validate-pwa.js` from the project root.
-3. Use the hosted URL in PWA Builder or Bubblewrap.
-4. Build/sign the Android package.
-5. Put the completed Digital Asset Links file at `/.well-known/assetlinks.json` on the same HTTPS host.
-6. Rebuild or reinstall the Android app so domain verification refreshes.
+```text
+https://craig-coda.github.io/.well-known/assetlinks.json
+```
 
-Chrome installability requires the manifest basics above. A TWA additionally needs the app-to-site and site-to-app Digital Asset Links relationship to remove the browser URL bar.
+It does not check only inside the project folder:
+
+```text
+https://craig-coda.github.io/WH1_2_3_SIM/.well-known/assetlinks.json
+```
+
+Use `assetlinks.template.json` or `.well-known/assetlinks.example.json` after PWABuilder gives you the Android package id and signing SHA-256 fingerprint. The completed `assetlinks.json` must be hosted at the root of the origin or on a custom domain you control.

@@ -1,13 +1,14 @@
-const CACHE_NAME = 'plant076-single-version-v96';
+const CACHE_NAME = 'plant076-single-version-v97';
+const BASE_PATH = '/WH1_2_3_SIM/';
 const APP_SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
-  './service-worker.js',
-  './icon-192.png',
-  './icon-512.png',
-  './maskable-icon-512.png',
-  './screenshot-wide.png'
+  BASE_PATH,
+  BASE_PATH + 'index.html',
+  BASE_PATH + 'manifest.json',
+  BASE_PATH + 'service-worker.js',
+  BASE_PATH + 'icon-192.png',
+  BASE_PATH + 'icon-512.png',
+  BASE_PATH + 'maskable-icon-512.png',
+  BASE_PATH + 'screenshot-wide.png'
 ];
 
 self.addEventListener('install', event => {
@@ -28,14 +29,19 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
+        if (!response || response.status !== 200) return response;
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(() => caches.match(BASE_PATH + 'index.html'));
     })
   );
 });
