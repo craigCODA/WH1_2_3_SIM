@@ -4274,6 +4274,15 @@ const SHIP_OFFICE={
   cageX0:(65/3)*FEET_TO_METERS,cageX1:(65/3)*FEET_TO_METERS+12*FEET_TO_METERS,cageZ0:0,cageZ1:12*FEET_TO_METERS,
   cageDoorX1:(65/3)*FEET_TO_METERS+4*FEET_TO_METERS
 };
+const NEW_HIRE_PRODUCT_CHARACTER={
+  x:SHIP_OFFICE.hallX+6.5*FEET_TO_METERS,
+  z:(SHIP_OFFICE.openZ0+SHIP_OFFICE.openZ1)/2,
+  yaw:-Math.PI/2,
+  bodyColor:0x1255a4,
+  headGlassColor:0xa7e4f2,
+  label:'NEW HIRE',
+  product:'NEW PRODUCT'
+};
 const FORKLIFT_PARKING_ZONES=[
   {x0:66*FEET_TO_METERS,x1:82*FEET_TO_METERS,z0:19*FEET_TO_METERS,z1:67*FEET_TO_METERS,stalls:12},
   {x0:46*FEET_TO_METERS,x1:62*FEET_TO_METERS,z0:51*FEET_TO_METERS,z1:67*FEET_TO_METERS,stalls:4},
@@ -6422,6 +6431,17 @@ for(const tz of [SHIP_OFFICE.roomZ+(13/3)*FEET_TO_METERS,SHIP_OFFICE.roomZ+(28/3
   floorPaintContext.arc(metersToFloorPixels((SHIP_OFFICE.hallX+SHIP_OFFICE.bathX0)/2),metersToFloorPixels(tz),Math.max(3,metersToFloorPixels(2*FEET_TO_METERS)),0,Math.PI*2);
   floorPaintContext.fill();
 }
+floorPaintContext.fillStyle='rgba(18,85,164,0.26)';
+floorPaintContext.beginPath();
+floorPaintContext.arc(
+  metersToFloorPixels(NEW_HIRE_PRODUCT_CHARACTER.x),
+  metersToFloorPixels(NEW_HIRE_PRODUCT_CHARACTER.z),
+  Math.max(3,metersToFloorPixels(2.4*FEET_TO_METERS)),
+  0,
+  Math.PI*2
+);
+floorPaintContext.fill();
+drawFloorText(NEW_HIRE_PRODUCT_CHARACTER.label,NEW_HIRE_PRODUCT_CHARACTER.x,NEW_HIRE_PRODUCT_CHARACTER.z+2.8*FEET_TO_METERS,0,1.05,0.1);
 
 // West-side interior plant wall, broken at the patio doorway.
 floorPaintContext.fillStyle='#9b9b9b';
@@ -7565,6 +7585,64 @@ const Gwalls=new THREE.Group(); scene.add(Gwalls);
       table.position.set((so.hallX+so.bathX0)/2,1.25*FEET_TO_METERS,tableZ);
       table.castShadow=false; table.receiveShadow=false;
       Gwalls.add(table);
+    }
+    {
+      const c=NEW_HIRE_PRODUCT_CHARACTER;
+      const figure=new THREE.Group();
+      figure.position.set(c.x,0,c.z);
+      figure.rotation.y=c.yaw;
+      const blueMat=new THREE.MeshStandardMaterial({color:c.bodyColor,roughness:0.48,metalness:0.04});
+      const glassMat=new THREE.MeshStandardMaterial({color:c.headGlassColor,transparent:true,opacity:0.42,roughness:0.08,metalness:0.05,depthWrite:false});
+      const liquidMat=new THREE.MeshStandardMaterial({color:c.bodyColor,transparent:true,opacity:0.72,roughness:0.35,metalness:0.02});
+      const capMat=new THREE.MeshStandardMaterial({color:0x0b3f85,roughness:0.32,metalness:0.18});
+      const badgeMat=new THREE.MeshStandardMaterial({color:0xf5f5f0,roughness:0.55});
+      const addFigureMesh=(mesh)=>{
+        mesh.castShadow=false; mesh.receiveShadow=false;
+        figure.add(mesh);
+        return mesh;
+      };
+      const limb=(a,b,r=0.09*FEET_TO_METERS)=>{
+        const mid=new THREE.Vector3().addVectors(a,b).multiplyScalar(0.5);
+        const dir=new THREE.Vector3().subVectors(b,a);
+        const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,dir.length(),12),blueMat);
+        mesh.position.copy(mid);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
+        return addFigureMesh(mesh);
+      };
+      const v=(x,y,z)=>new THREE.Vector3(x*FEET_TO_METERS,y*FEET_TO_METERS,z*FEET_TO_METERS);
+      limb(v(0,1.95,0),v(0,3.65,0),0.12*FEET_TO_METERS);      // body
+      limb(v(0,3.35,0),v(-0.78,2.78,0.08),0.09*FEET_TO_METERS); // left arm
+      limb(v(0,3.35,0),v(0.78,2.78,0.08),0.09*FEET_TO_METERS);  // right arm
+      limb(v(0,1.95,0),v(-0.46,0.45,0.12),0.1*FEET_TO_METERS);  // left leg
+      limb(v(0,1.95,0),v(0.46,0.45,0.12),0.1*FEET_TO_METERS);   // right leg
+      for(const sx of [-0.82,0.82]){
+        const hand=new THREE.Mesh(new THREE.SphereGeometry(0.23*FEET_TO_METERS,16,12),blueMat);
+        hand.position.set(sx*FEET_TO_METERS,2.72*FEET_TO_METERS,0.1*FEET_TO_METERS);
+        hand.scale.set(1.18,0.82,0.95);
+        addFigureMesh(hand);
+      }
+      for(const sx of [-0.5,0.5]){
+        const foot=new THREE.Mesh(new THREE.BoxGeometry(0.52*FEET_TO_METERS,0.16*FEET_TO_METERS,0.34*FEET_TO_METERS),blueMat);
+        foot.position.set(sx*FEET_TO_METERS,0.12*FEET_TO_METERS,0.18*FEET_TO_METERS);
+        addFigureMesh(foot);
+      }
+      const headShell=new THREE.Mesh(new THREE.SphereGeometry(0.68*FEET_TO_METERS,32,18),glassMat);
+      headShell.position.set(0,4.68*FEET_TO_METERS,0);
+      addFigureMesh(headShell);
+      const headLiquid=new THREE.Mesh(new THREE.SphereGeometry(0.58*FEET_TO_METERS,24,12),liquidMat);
+      headLiquid.position.set(0,4.43*FEET_TO_METERS,0);
+      headLiquid.scale.set(1,0.56,1);
+      addFigureMesh(headLiquid);
+      const capTop=new THREE.Mesh(new THREE.CylinderGeometry(0.3*FEET_TO_METERS,0.38*FEET_TO_METERS,0.22*FEET_TO_METERS,24),capMat);
+      capTop.position.set(0,5.38*FEET_TO_METERS,0);
+      addFigureMesh(capTop);
+      const collar=new THREE.Mesh(new THREE.CylinderGeometry(0.42*FEET_TO_METERS,0.42*FEET_TO_METERS,0.16*FEET_TO_METERS,24),capMat);
+      collar.position.set(0,3.98*FEET_TO_METERS,0);
+      addFigureMesh(collar);
+      const badge=new THREE.Mesh(new THREE.BoxGeometry(0.72*FEET_TO_METERS,0.44*FEET_TO_METERS,0.05*FEET_TO_METERS),badgeMat);
+      badge.position.set(0,2.85*FEET_TO_METERS,-0.11*FEET_TO_METERS);
+      addFigureMesh(badge);
+      Gwalls.add(figure);
     }
   }
   if(rawGoodsOffice){
