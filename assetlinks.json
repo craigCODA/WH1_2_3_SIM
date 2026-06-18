@@ -5,9 +5,9 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "io.github.craigcoda.wh123sim",
+      "package_name": "io.github.craig_coda.twa",
       "sha256_cert_fingerprints": [
-        "PASTE_YOUR_RELEASE_SIGNING_SHA256_FINGERPRINT_HERE"
+        "57:CD:6B:02:05:5C:8C:6D:60:AE:83:67:24:F4:CE:24:8A:BD:05:D4:47:93:47:4A:CF:C5:09:E3:DF:14:CB:DB"
       ]
     }
   }
